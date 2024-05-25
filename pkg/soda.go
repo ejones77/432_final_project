@@ -11,9 +11,7 @@ import (
 	"github.com/SebastiaanKlippert/go-soda"
 )
 
-type Data map[string]interface{}
-
-func GetAllData(apiEndpoint string, orderColumn string) ([]Data, error) {
+func GetAllData(apiEndpoint string, orderColumn string) ([]map[string]interface{}, error) {
 	url := fmt.Sprintf("https://data.cityofchicago.org/resource/%s", apiEndpoint)
 	gr := soda.NewGetRequest(url, "")
 	gr.Format = "json"
@@ -24,7 +22,7 @@ func GetAllData(apiEndpoint string, orderColumn string) ([]Data, error) {
 		return nil, err
 	}
 
-	var allData []Data
+	var allData []map[string]interface{}
 
 	// goroutines to fetch data -- defined in documentation of go-soda
 	for i := 0; i < 4; i++ {
@@ -42,7 +40,7 @@ func GetAllData(apiEndpoint string, orderColumn string) ([]Data, error) {
 					log.Fatal(err)
 				}
 
-				var results []Data
+				var results []map[string]interface{}
 				err = json.NewDecoder(resp.Body).Decode(&results)
 				resp.Body.Close()
 				if err != nil {
@@ -58,7 +56,7 @@ func GetAllData(apiEndpoint string, orderColumn string) ([]Data, error) {
 	return allData, nil
 }
 
-func QuerySample(apiEndpoint string, orderColumn string, selectClause []string, whereClause string) ([]Data, error) {
+func QuerySample(apiEndpoint string, orderColumn string, selectClause []string, whereClause string) ([]map[string]interface{}, error) {
 	/*
 		Define the query to pull a specific set of data
 		Params:
@@ -113,7 +111,7 @@ func QuerySample(apiEndpoint string, orderColumn string, selectClause []string, 
 	}
 	defer resp.Body.Close()
 
-	var results []Data
+	var results []map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&results)
 	if err != nil {
 		return nil, err
