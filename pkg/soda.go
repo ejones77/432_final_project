@@ -7,60 +7,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"reflect"
 
 	"github.com/SebastiaanKlippert/go-soda"
 )
-
-func GetAllData(apiEndpoint string, orderColumn string) ([]map[string]interface{}, error) {
-	url := fmt.Sprintf("https://data.cityofchicago.org/resource/%s", apiEndpoint)
-	gr := soda.NewGetRequest(url, "")
-	gr.Format = "json"
-	gr.Query.AddOrder(orderColumn, soda.DirAsc)
-
-	ogr, err := soda.NewOffsetGetRequest(gr)
-	if err != nil {
-		return nil, err
-	}
-
-	var allData []map[string]interface{}
-
-	// goroutines to fetch data -- defined in documentation of go-soda
-	for i := 0; i < 4; i++ {
-
-		ogr.Add(1)
-		go func() {
-			defer ogr.Done()
-
-			for {
-				resp, err := ogr.Next(2000)
-				if err == soda.ErrDone {
-					break
-				}
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				var results []map[string]interface{}
-				err = json.NewDecoder(resp.Body).Decode(&results)
-				resp.Body.Close()
-				if err != nil {
-					log.Fatal(err)
-				}
-				allData = append(allData, results...)
-			}
-		}()
-
-	}
-	ogr.Wait()
-
-	return allData, nil
-}
 
 func QuerySample(apiEndpoint string,
 	orderColumn string,
 	selectClause []string,
 	whereClause string,
-	limit uint) ([]map[string]interface{}, error) {
+	limit uint,
+	v interface{}) error {
 	/*
 		Define the query to pull a specific set of data
 		Params:
@@ -78,25 +35,78 @@ func QuerySample(apiEndpoint string,
 	url := fmt.Sprintf("https://data.cityofchicago.org/resource/%s", apiEndpoint)
 	sodareq := soda.NewGetRequest(url, "")
 
-	// get some JSON data using a complex query
 	sodareq.Format = "json"
 	sodareq.Query.Select = selectClause
 	sodareq.Query.Where = whereClause
 	sodareq.Query.Limit = limit
 	sodareq.Query.AddOrder(orderColumn, soda.DirAsc)
 
-	// get the results
 	resp, err := sodareq.Get()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 
-	var results []map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&results)
+	err = json.NewDecoder(resp.Body).Decode(v)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return results, nil
+	return nil
+}
+
+func ConcurrentQuerySample(apiEndpoint string,
+	selectClause []string,
+	whereClause string,
+	concurrency int,
+	pageSize uint,
+	v interface{}) error {
+
+	url := fmt.Sprintf("https://data.cityofchicago.org/resource/%s", apiEndpoint)
+	gr := soda.NewGetRequest(url, "")
+	gr.Format = "json"
+	gr.Query.Select = selectClause
+	gr.Query.Where = whereClause
+	gr.Query.AddOrder("trip_start_timestamp", soda.DirAsc)
+
+	ogr, err := soda.NewOffsetGetRequest(gr)
+	if err != nil {
+		return err
+	}
+
+	resultsVal := reflect.ValueOf(v).Elem()
+
+	for i := 0; i < concurrency; i++ {
+		ogr.Add(1)
+		go func() {
+			defer ogr.Done()
+
+			for {
+				resp, err := ogr.Next(pageSize)
+				if err == soda.ErrDone {
+					break
+				}
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				// Create a new slice to hold this batch of results
+				sliceType := reflect.SliceOf(resultsVal.Type().Elem())
+				data := reflect.New(sliceType).Interface()
+
+				err = json.NewDecoder(resp.Body).Decode(data)
+				resp.Body.Close()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				// Append the data to the results
+				resultsVal.Set(reflect.AppendSlice(resultsVal, reflect.ValueOf(data).Elem()))
+			}
+		}()
+	}
+
+	ogr.Wait()
+
+	return nil
 }

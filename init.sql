@@ -21,11 +21,11 @@ CREATE TABLE geographies (
 );
 
 CREATE TABLE taxi_rideshares (
-    trip_id SERIAL PRIMARY KEY,
+    trip_id VARCHAR(255) PRIMARY KEY,
     taxi_id VARCHAR(255),
     trip_start_timestamp TIMESTAMP,
     trip_end_timestamp TIMESTAMP,
-    trip_seconds INTEGER,
+    trip_seconds NUMERIC,
     trip_miles NUMERIC,
     fare NUMERIC,
     tip NUMERIC,
@@ -34,24 +34,20 @@ CREATE TABLE taxi_rideshares (
     pickup_centroid_latitude NUMERIC,
     pickup_centroid_longitude NUMERIC,
     dropoff_centroid_latitude NUMERIC,
-    dropoff_centroid_longitude NUMERIC,
-    pickup_zip_code VARCHAR(255),
-    dropoff_zip_code VARCHAR(255),
-    pickup_community_area VARCHAR(255),
-    dropoff_community_area VARCHAR(255)
+    dropoff_centroid_longitude NUMERIC
 );
 
 CREATE TABLE covid (
     zip_code VARCHAR(255),
     week_start DATE,
     week_end DATE,
-    cases_weekly INTEGER,
+    cases_weekly NUMERIC,
     case_rate_weekly NUMERIC,
-    tests_weekly INTEGER,
+    tests_weekly NUMERIC,
     percent_tested_positive_weekly NUMERIC,
-    deaths_weekly INTEGER,
+    deaths_weekly NUMERIC,
     death_rate_weekly NUMERIC,
-    population INTEGER,
+    population NUMERIC,
     zip_code_location VARCHAR(255),
     community_area VARCHAR(255)
 );
@@ -89,8 +85,8 @@ CREATE TABLE traffic_estimates (
     speed NUMERIC,
     direction VARCHAR(255),
     length NUMERIC,
-    bus_count INTEGER,
-    hour INTEGER,
+    bus_count NUMERIC,
+    hour NUMERIC,
     day_of_week VARCHAR(255),
     month VARCHAR(255),
     start_latitude NUMERIC,

@@ -2,17 +2,65 @@
 
 ## Overview
 
-- Postgres lives on a single VM instance -- specifically using an e2-micro machine type and the base image for postgres version 15 [found here](https://console.cloud.google.com/marketplace/product/google/postgresql15?hl=en&project=final-project-424101)
-
+- Postgres lives on a single VM instance -- specifically using an e2-micro machine type and the base image for postgis [found here](https://gorm.io/index.html)
+- Each table gets its own go file under the `cmd` subfolders separated by the frequency of extraction needed.
+- During extraction, the go-soda library filters the intake to reduce query size
+- Transformations shape the raw data into the format needed for the postgres tables
+- Loading enforces type constraints & delivers records to postgres
+- Geocoding is done through postGIS and queries after loading raw data in. 
 
 ## Set up -- postgres
 
 - In a GCP project, create a VM instance under the Compute Engine
 - Start the machine with a container using the image `marketplace.gcr.io/google/postgresql15:latest`
-- This [tutorial](https://joncloudgeek.com/blog/deploy-postgres-container-to-compute-engine/) helped set up the necessary configurations for the VM & container (up to the point where they talk about db migrations)
+- This [tutorial](https://joncloudgeek.com/blog/deploy-postgres-container-to-compute-engine/) helped set up the necessary configurations for the VM (up to the point where they talk about db migrations)
+- Instead of using the pre-built Google container, we are submitting a custom container with PostGIS enabled. 
+    - this is to allow for geocoding in the database when executing queries.
+
+- Starting the container requires setting this up in the VM -- SSH into it and to the following
+```
+sudo apt-get update &&
+sudo apt-get install -y docker.io &&
+sudo docker pull postgis/postgis &&
+sudo docker run --name <container_name> -e POSTGRES_PASSWORD=<your_password> -p 5432:5432 -d postgis/postgis
+
+get ogr2ogr isntalled in the container (Not the VM) with
+
+docker exec -it <container_id_or_name> bash
+apt-get update && apt-get install -y gdal-bin && rm -rf /var/lib/apt/lists/*
+
+confirm that's working with 
+`ogr2ogr --version`
+
+run "exit" to leave the container
+
+then you should be able to upload the geojson files to the VM & copy them to the container with
+
+
+sudo docker cp "Boundaries - Community Areas (current).geojson" <container_id_or_name>:/"Boundaries - Community Areas (current).geojson"
+sudo docker exec -it <container_id_or_name> bash
+ogr2ogr -f "PostgreSQL" PG:"dbname=<your_db> user=<your_username> password=<your_password>" /file.geojson
+
+easiest to have the files represent what you want the table name to be -- i.e. boundaries_community_areas
+```
+
+Then get the new database set up -- still SSHd into the VM
+
+```
+docker exec -it <container_name/id> bash &&
+psql -U postgres
+
+then in psql:
+
+CREATE DATABASE <db_name>;
+\c <db_name>
+
+CREATE EXTENSION postgis;
+```
+
 - confirm the database is set up 
-- This process let's you define a db_name and password, the default user is postgres
-- Confirm the connection with
+- This process lets you define a db_name and password, the default user is postgres
+- Confirm the connection outside the VM on your local machine with
 
 ```
 psql -h <external_ip> -U postgres -d <db_name>
@@ -35,27 +83,47 @@ But you'll end up with the following
 
 ```
 
-## How the Go ETL works
 
-Each table gets its own go file under the `cmd` subfolders separated by the frequency of extraction needed. 
+- Copy geojson files into the container
+`docker exec -it <container_id> bash`
 
-The pipeline consists of the following steps
+- Running `taxi_rideshares.go` and `geographies.go` will populate the database
+- then a query like this can obtain the zip codes and community areas through PostGIS
+```
+SELECT taxi_rideshares.*, boundaries_zip_codes.zip
+FROM taxi_rideshares
+JOIN boundaries_zip_codes 
+ON ST_Contains(
+    boundaries_zip_codes.wkb_geometry, 
+    ST_SetSRID(ST_Point(taxi_rideshares.pickup_centroid_longitude, taxi_rideshares.pickup_centroid_latitude), 4326)
+);
+```
 
-- Extraction:
-    - 
-    - Socrata API [docs for SoQL](https://dev.socrata.com/docs/queries/) (used for the extraction queries)
 
-
-## Dependencies:
+## Dependencies (handled by Go):
 - [go-soda](https://pkg.go.dev/github.com/SebastiaanKlippert/go-soda@v1.0.1)
-- [gota](https://pkg.go.dev/github.com/go-gota/gota/dataframe)
-- [pq](https://pkg.go.dev/github.com/lib/pq#section-readme)
+- [gorm](https://gorm.io/index.html)
 - [godotenv](https://pkg.go.dev/github.com/joho/Godotenv)
-- Postgres version 15
+
+## Dependencies (necessary for developing locally):
+- Google cloud console
+- Postgres
+- Go version 1.22.0
+- ogr2ogr (installing GDAL)
+- a `.env` file with the following parameters
+
+
+```
+POSTGRES_DB=YourDBName
+POSTGRES_HOST=VMExternalIP
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=YOUR_PASSWORD
+POSTGRES_PORT=5432
+```
 
 
 
 ## Still to do:
-- Apply extraction/loading utils to the other tables
+- 
 - Dockerize & Deploy
 - Frontend deployment
