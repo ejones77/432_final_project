@@ -35,5 +35,27 @@ But you'll end up with the following
 
 ```
 
-## Set up -- Go ETL
+## How the Go ETL works
 
+Each table gets its own go file under the `cmd` subfolders separated by the frequency of extraction needed. 
+
+The pipeline consists of the following steps
+
+- Extraction:
+    - 
+    - Socrata API [docs for SoQL](https://dev.socrata.com/docs/queries/) (used for the extraction queries)
+
+
+## Dependencies:
+- [go-soda](https://pkg.go.dev/github.com/SebastiaanKlippert/go-soda@v1.0.1)
+- [gota](https://pkg.go.dev/github.com/go-gota/gota/dataframe)
+- [pq](https://pkg.go.dev/github.com/lib/pq#section-readme)
+- [godotenv](https://pkg.go.dev/github.com/joho/Godotenv)
+- Postgres version 15
+
+
+
+## Still to do:
+- Apply extraction/loading utils to the other tables
+- Dockerize & Deploy
+- Frontend deployment

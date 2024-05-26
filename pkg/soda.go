@@ -62,20 +62,17 @@ func QuerySample(apiEndpoint string, orderColumn string, selectClause []string, 
 		Params:
 			apiEndpoint: the endpoint to pull data from
 			orderColumn: the column to order the data by
+
 			selectClause: []string the columns to select
 			ex: []string{"farm_name", "category", "item", "zipcode"}
+
 			whereClause: string how to filter the data
+			ex: `lower(farm_name) like '%sun%farm%' AND (item in('Radishes',
+			'Cucumbers') OR lower(item) like '%flower%')`
 	*/
 
 	url := fmt.Sprintf("https://data.cityofchicago.org/resource/%s", apiEndpoint)
 	sodareq := soda.NewGetRequest(url, "")
-
-	// count all records
-	count, err := sodareq.Count()
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println(count)
 
 	// get dataset last updated time
 	modified, err := sodareq.Modified()

@@ -5,6 +5,5 @@ import (
 )
 
 func main() {
-	// Use the TransformGeographies function
-	once.TransformGeographies()
+	once.LoadGeographies()
 }

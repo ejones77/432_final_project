@@ -6,7 +6,7 @@ CREATE TABLE geographies (
     ccvi_category VARCHAR(255),
     rank_socioeconomic_status NUMERIC,
     rank_adults_no_pcp NUMERIC,
-    rank_cumulative_mobility_rate NUMERIC,
+    rank_cumulative_mobility_ratio NUMERIC,
     rank_frontline_essential_workers NUMERIC,
     rank_age_65_plus NUMERIC,
     rank_comorbid_conditions NUMERIC,
