@@ -56,7 +56,11 @@ func GetAllData(apiEndpoint string, orderColumn string) ([]map[string]interface{
 	return allData, nil
 }
 
-func QuerySample(apiEndpoint string, orderColumn string, selectClause []string, whereClause string) ([]map[string]interface{}, error) {
+func QuerySample(apiEndpoint string,
+	orderColumn string,
+	selectClause []string,
+	whereClause string,
+	limit uint) ([]map[string]interface{}, error) {
 	/*
 		Define the query to pull a specific set of data
 		Params:
@@ -74,32 +78,12 @@ func QuerySample(apiEndpoint string, orderColumn string, selectClause []string, 
 	url := fmt.Sprintf("https://data.cityofchicago.org/resource/%s", apiEndpoint)
 	sodareq := soda.NewGetRequest(url, "")
 
-	// get dataset last updated time
-	modified, err := sodareq.Modified()
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println(modified)
-
-	// list all fields/columns
-	fields, err := sodareq.Fields()
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println(fields)
-
 	// get some JSON data using a complex query
 	sodareq.Format = "json"
 	sodareq.Query.Select = selectClause
 	sodareq.Query.Where = whereClause
+	sodareq.Query.Limit = limit
 	sodareq.Query.AddOrder(orderColumn, soda.DirAsc)
-
-	// count this result first
-	querycount, err := sodareq.Count()
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println(querycount)
 
 	// get the results
 	resp, err := sodareq.Get()

@@ -43,7 +43,7 @@ func extractPubHealth() []map[string]interface{} {
 		"community_area",
 		columns,
 		"",
-	)
+		200)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -73,7 +73,9 @@ func extractCCVI() []map[string]interface{} {
 	data, err := pkg.QuerySample("xhc6-88s9",
 		"geography_type",
 		columns,
-		"")
+		"",
+		200)
+
 	if err != nil {
 		fmt.Println(err)
 	}

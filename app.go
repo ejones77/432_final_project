@@ -1,9 +1,13 @@
 package main
 
 import (
-	"github.com/ejones77/432_final_project/cmd/once"
+	"fmt"
+
+	"github.com/ejones77/432_final_project/cmd/monthly"
 )
 
 func main() {
-	once.LoadGeographies()
+	fmt.Println("---------------------------------")
+	data := monthly.TransformTaxiRideshares()
+	fmt.Println(data.Describe())
 }
