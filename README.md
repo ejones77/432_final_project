@@ -4,8 +4,12 @@
 
 - Postgres lives on a single VM instance -- specifically using an e2-micro machine type and the base image for postgis [found here](https://gorm.io/index.html)
 - Each table gets its own go file under the `cmd` subfolders separated by the frequency of extraction needed.
-- During extraction, the go-soda library filters the intake to reduce query size
+- Helper functions used throughout multiple programs live in the `pkg` subdir
+    - custom functions for floats and datetimes are in `type_helpers.go`, Chicago Data Portal labels numeric data generically, we can too.
+    - During extraction, `soda.go` filters the intake and funnels json data into specific structs, since we know the data coming in
+    - `postgres.go` handles the loading with special help from the gorm package.
 - Transformations shape the raw data into the format needed for the postgres tables
+    - Making sense of the types from JSON and the types we need to combine things for postgres is handled through custom types
 - Loading enforces type constraints & delivers records to postgres
 - Geocoding is done through postGIS and queries after loading raw data in. 
 
@@ -23,35 +27,41 @@ sudo apt-get update &&
 sudo apt-get install -y docker.io &&
 sudo docker pull postgis/postgis &&
 sudo docker run --name <container_name> -e POSTGRES_PASSWORD=<your_password> -p 5432:5432 -d postgis/postgis
+```
 
 get ogr2ogr isntalled in the container (Not the VM) with
-
+```
 docker exec -it <container_id_or_name> bash
 apt-get update && apt-get install -y gdal-bin && rm -rf /var/lib/apt/lists/*
+```
 
 confirm that's working with 
+
+```
 `ogr2ogr --version`
+```
 
 run "exit" to leave the container
 
 then you should be able to upload the geojson files to the VM & copy them to the container with
 
-
+```
 sudo docker cp "Boundaries - Community Areas (current).geojson" <container_id_or_name>:/"Boundaries - Community Areas (current).geojson"
 sudo docker exec -it <container_id_or_name> bash
 ogr2ogr -f "PostgreSQL" PG:"dbname=<your_db> user=<your_username> password=<your_password>" /file.geojson
+```
 
 easiest to have the files represent what you want the table name to be -- i.e. boundaries_community_areas
-```
 
 Then get the new database set up -- still SSHd into the VM
 
 ```
 docker exec -it <container_name/id> bash &&
 psql -U postgres
+```
 
 then in psql:
-
+```
 CREATE DATABASE <db_name>;
 \c <db_name>
 
@@ -83,12 +93,12 @@ But you'll end up with the following
 
 ```
 
-
 - Copy geojson files into the container
 `docker exec -it <container_id> bash`
 
 - Running `taxi_rideshares.go` and `geographies.go` will populate the database
 - then a query like this can obtain the zip codes and community areas through PostGIS
+
 ```
 SELECT taxi_rideshares.*, boundaries_zip_codes.zip
 FROM taxi_rideshares
@@ -98,7 +108,7 @@ ON ST_Contains(
     ST_SetSRID(ST_Point(taxi_rideshares.pickup_centroid_longitude, taxi_rideshares.pickup_centroid_latitude), 4326)
 );
 ```
-
+And with that, the data should be ready for analysis on the front end!
 
 ## Dependencies (handled by Go):
 - [go-soda](https://pkg.go.dev/github.com/SebastiaanKlippert/go-soda@v1.0.1)
@@ -124,6 +134,5 @@ POSTGRES_PORT=5432
 
 
 ## Still to do:
-- 
 - Dockerize & Deploy
 - Frontend deployment

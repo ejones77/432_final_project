@@ -37,7 +37,7 @@ CREATE TABLE taxi_rideshares (
     dropoff_centroid_longitude NUMERIC
 );
 
-CREATE TABLE covid (
+CREATE TABLE covid_cases (
     zip_code VARCHAR(255),
     week_start DATE,
     week_end DATE,
@@ -47,13 +47,11 @@ CREATE TABLE covid (
     percent_tested_positive_weekly NUMERIC,
     deaths_weekly NUMERIC,
     death_rate_weekly NUMERIC,
-    population NUMERIC,
-    zip_code_location VARCHAR(255),
-    community_area VARCHAR(255)
+    population NUMERIC
 );
 
 CREATE TABLE building_permits (
-    id SERIAL PRIMARY KEY,
+    id VARCHAR(255) PRIMARY KEY,
     permit_number VARCHAR(255),
     permit_status VARCHAR(255),
     permit_milestone VARCHAR(255),
@@ -75,8 +73,7 @@ CREATE TABLE building_permits (
     total_fee NUMERIC,
     community_area VARCHAR(255),
     latitude NUMERIC,
-    longitude NUMERIC,
-    zip_code VARCHAR(255)
+    longitude NUMERIC
 );
 
 CREATE TABLE traffic_estimates (

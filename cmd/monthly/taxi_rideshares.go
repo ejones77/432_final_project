@@ -76,6 +76,7 @@ func ExtractTaxis() ([]Taxis, error) {
 	}
 	var results []Taxis
 	err := pkg.ConcurrentQuerySample("wrvz-psew",
+		"trip_start_timestamp",
 		columns,
 		`trip_start_timestamp >= '2020-04-01' 
 		AND trip_start_timestamp < '2020-05-01'`,
@@ -109,6 +110,7 @@ func ExtractRideshares() ([]Rideshares, error) {
 
 	var results []Rideshares
 	err := pkg.ConcurrentQuerySample("m6dm-c72p",
+		"trip_start_timestamp",
 		columns,
 		`trip_start_timestamp >= '2020-04-01' 
 		AND trip_start_timestamp < '2020-05-01'`,

@@ -56,6 +56,7 @@ func QuerySample(apiEndpoint string,
 }
 
 func ConcurrentQuerySample(apiEndpoint string,
+	orderColumn string,
 	selectClause []string,
 	whereClause string,
 	concurrency int,
@@ -67,7 +68,7 @@ func ConcurrentQuerySample(apiEndpoint string,
 	gr.Format = "json"
 	gr.Query.Select = selectClause
 	gr.Query.Where = whereClause
-	gr.Query.AddOrder("trip_start_timestamp", soda.DirAsc)
+	gr.Query.AddOrder(orderColumn, soda.DirAsc)
 
 	ogr, err := soda.NewOffsetGetRequest(gr)
 	if err != nil {
