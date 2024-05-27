@@ -189,12 +189,6 @@ cat ~/.ssh/id_ed25519.pub
 
 Copy the output of the last command and add it to GitHub account
 
--- set up the VM with GCP secrets
-
-```
-SERVICE_ACCOUNT_TOKEN=$(curl "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" -H "Metadata-Flavor: Google")
-```
-
 Then you should be able to clone
 and be able to build with the same steps
 
