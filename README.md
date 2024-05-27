@@ -170,6 +170,8 @@ docker run -v /path/to/application_default_credentials.json:/application_default
 - this assumes a private github repo is set up for the project
 
 - creating a new VM instance (also e2 micro)
+- needs access scopes to all cloud services
+- needs service account to have secrets access. 
 - setting up docker 
 
 ```
@@ -187,6 +189,12 @@ cat ~/.ssh/id_ed25519.pub
 ```
 
 Copy the output of the last command and add it to GitHub account
+
+-- set up the VM with GCP secrets
+
+```
+SERVICE_ACCOUNT_TOKEN=$(curl "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" -H "Metadata-Flavor: Google")
+```
 
 Then you should be able to clone
 and be able to build with the same steps
