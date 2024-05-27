@@ -12,7 +12,36 @@
     - Making sense of the types from JSON and the types we need to combine things for postgres is handled through custom types
 - Loading enforces type constraints & delivers records to postgres
 - Geocoding is done through postGIS and queries after loading raw data in, matching on JOINS with geoJSON polygons for ZIP code and Community Area
--
+
+
+## Dependencies (necessary for developing locally):
+- Google cloud console
+- Postgres
+- Go version 1.22.0
+- ogr2ogr (installing GDAL)
+- the following parameters as secrets
+
+I created a .env file like this
+```
+POSTGRES_DB=YourDBName
+POSTGRES_HOST=VMExternalIP
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=YOUR_PASSWORD
+POSTGRES_PORT=5432
+```
+then added the json equivalent in GCP  
+
+```
+{
+  "POSTGRES_DB": "mydatabase",
+  "POSTGRES_HOST": "localhost",
+  "POSTGRES_USER": "myuser",
+  "POSTGRES_PASSWORD": "mypassword",
+  "POSTGRES_PORT": "5432"
+}
+```
+
+gcp needs a service account with access to secrets management for this to work.
 
 ## Set up -- postgres
 
@@ -116,10 +145,20 @@ ON ST_Contains(
 And with that, the data should be ready for analysis on the front end!
 
 ## Setup -- go code locally
-```
-docker build -t 432-final . && docker run --env-file .env 432-final
+
+get a google service account and connect it to your enviornment variables
+export GOOGLE_APPLICATION_CREDENTIALS="service-account.json"
+
+make the service account able to access secrets
+I did this going to cloud IAM and adding a secrets manager accessor responsibility
+
+And followed the steps [here](https://cloud.google.com/docs/authentication/provide-credentials-adc#how-to)
 ```
 
+docker build -t your-image-name
+docker run -v /path/to/application_default_credentials.json:/application_default_credentials.json -e GOOGLE_APPLICATION_CREDENTIALS=/application_default_credentials.json your-image-name
+
+```
 ## Setup -- containerized deployment
 - this assumes a private github repo is set up for the project
 
@@ -143,11 +182,10 @@ cat ~/.ssh/id_ed25519.pub
 Copy the output of the last command and add it to GitHub account
 
 Then you should be able to clone
-and then add your .env file to the repo
 and be able to build with the same steps
 
 ```
-sudo docker build -t 432-final . && sudo docker run --env-file .env 432-final
+sudo docker build -t 432-final . && sudo docker run 432-final
 ```
 
 Assumes my private repository, but changing this to your solo reference should work too.
@@ -155,24 +193,8 @@ Assumes my private repository, but changing this to your solo reference should w
 ## Dependencies (handled by Go):
 - [go-soda](https://pkg.go.dev/github.com/SebastiaanKlippert/go-soda@v1.0.1)
 - [gorm](https://gorm.io/index.html)
-- [godotenv](https://pkg.go.dev/github.com/joho/Godotenv)
+- [secretmanager](https://pkg.go.dev/cloud.google.com/go/secretmanager)
 - [cron](https://github.com/robfig/cron)
-
-## Dependencies (necessary for developing locally):
-- Google cloud console
-- Postgres
-- Go version 1.22.0
-- ogr2ogr (installing GDAL)
-- a `.env` file with the following parameters
-
-```
-POSTGRES_DB=YourDBName
-POSTGRES_HOST=VMExternalIP
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=YOUR_PASSWORD
-POSTGRES_PORT=5432
-```
-
 
 
 ## Still to do:

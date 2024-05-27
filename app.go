@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"time"
+
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	secretmanagerpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 
 	"github.com/ejones77/432_final_project/cmd/daily"
 	"github.com/ejones77/432_final_project/cmd/monthly"
@@ -41,19 +45,57 @@ func cronJob(c *cron.Cron, db *gorm.DB, jobtype string, job func(*gorm.DB) error
 	return err
 }
 
-func main() {
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("POSTGRES_HOST"),
-		os.Getenv("POSTGRES_PORT"),
-		os.Getenv("POSTGRES_USER"),
-		os.Getenv("POSTGRES_PASSWORD"),
-		os.Getenv("POSTGRES_DB"))
+func getSecret(secretID string) (map[string]string, error) {
+	ctx := context.Background()
+	client, err := secretmanager.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
 
+	accessRequest := &secretmanagerpb.AccessSecretVersionRequest{
+		Name: fmt.Sprintf("projects/final-project-424101/secrets/%s/versions/latest", secretID),
+	}
+
+	result, err := client.AccessSecretVersion(ctx, accessRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	// The secret value needs to be parsed as JSON.
+	var secretValues map[string]string
+	err = json.Unmarshal(result.Payload.Data, &secretValues)
+	if err != nil {
+		return nil, err
+	}
+
+	return secretValues, nil
+}
+
+func main() {
+
+	secrets, err := getSecret("POSTGRES_SECRETS")
+	if err != nil {
+		log.Fatalf("Failed to get secret: %v", err)
+	}
+
+	dbname := secrets["POSTGRES_DB"]
+	host := secrets["POSTGRES_HOST"]
+	user := secrets["POSTGRES_USER"]
+	password := secrets["POSTGRES_PASSWORD"]
+	port := secrets["POSTGRES_PORT"]
+
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host,
+		port,
+		user,
+		password,
+		dbname,
+	)
 	db := pkg.ConnectToPostgres(dsn)
 	c := cron.New()
 
 	// Run the daily job immediately on startup
-	err := daily.LoadBuildingPermits(db)
+	err = daily.LoadBuildingPermits(db)
 	if err != nil {
 		log.Fatal(err)
 	}
