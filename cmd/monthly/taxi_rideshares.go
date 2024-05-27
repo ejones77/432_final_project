@@ -2,6 +2,7 @@ package monthly
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/ejones77/432_final_project/pkg"
 	"gorm.io/gorm"
@@ -57,7 +58,7 @@ type TaxiRideshares struct {
 	DropoffCentroidLongitude pkg.Float64String `db:"dropoff_centroid_longitude"`
 }
 
-func ExtractTaxis() ([]Taxis, error) {
+func ExtractTaxis(db *gorm.DB) ([]Taxis, error) {
 	columns := []string{
 		"trip_id",
 		"taxi_id",
@@ -75,11 +76,29 @@ func ExtractTaxis() ([]Taxis, error) {
 		"dropoff_centroid_longitude",
 	}
 	var results []Taxis
+	var count int64
+	db.Table("taxis").Count(&count)
+
+	var startDate, endDate string
+
+	if count > 0 {
+		// Fetch the maximum date from the database
+		var maxDate time.Time
+		db.Table("taxis").Select("max(trip_start_timestamp)").Scan(&maxDate)
+
+		// Calculate start and end dates based on max date
+		startDate = maxDate.Format("2006-01-02")
+		endDate = maxDate.AddDate(0, 1, 0).Format("2006-01-02")
+	} else {
+		// Use a static one-month sample
+		startDate = "2020-04-01"
+		endDate = "2020-05-01"
+	}
+
 	err := pkg.ConcurrentQuerySample("wrvz-psew",
 		"trip_start_timestamp",
 		columns,
-		`trip_start_timestamp >= '2020-04-01' 
-		AND trip_start_timestamp < '2020-05-01'`,
+		fmt.Sprintf(`trip_start_timestamp >= '%s' AND trip_start_timestamp < '%s'`, startDate, endDate),
 		4,
 		2000,
 		&results)
@@ -91,7 +110,7 @@ func ExtractTaxis() ([]Taxis, error) {
 	return results, err
 }
 
-func ExtractRideshares() ([]Rideshares, error) {
+func ExtractRideshares(db *gorm.DB) ([]Rideshares, error) {
 	columns := []string{
 		"trip_id",
 		"trip_start_timestamp",
@@ -109,11 +128,29 @@ func ExtractRideshares() ([]Rideshares, error) {
 	}
 
 	var results []Rideshares
+	var count int64
+	db.Table("rideshares").Count(&count)
+
+	var startDate, endDate string
+
+	if count > 0 {
+		// Fetch the maximum date from the database
+		var maxDate time.Time
+		db.Table("rideshares").Select("max(trip_start_timestamp)").Scan(&maxDate)
+
+		// Calculate start and end dates based on max date
+		startDate = maxDate.Format("2006-01-02")
+		endDate = maxDate.AddDate(0, 1, 0).Format("2006-01-02")
+	} else {
+		// Use a static one-month sample
+		startDate = "2020-04-01"
+		endDate = "2020-05-01"
+	}
+
 	err := pkg.ConcurrentQuerySample("m6dm-c72p",
 		"trip_start_timestamp",
 		columns,
-		`trip_start_timestamp >= '2020-04-01' 
-		AND trip_start_timestamp < '2020-05-01'`,
+		fmt.Sprintf(`trip_start_timestamp >= '%s' AND trip_start_timestamp < '%s'`, startDate, endDate),
 		4,
 		2000,
 		&results)
@@ -125,7 +162,7 @@ func ExtractRideshares() ([]Rideshares, error) {
 	return results, err
 }
 
-func TransformTaxiRideshares() ([]TaxiRideshares, error) {
+func TransformTaxiRideshares(db *gorm.DB) ([]TaxiRideshares, error) {
 	/*
 		taxi id as null on rideshare
 		tips on taxis -> tip
@@ -135,12 +172,12 @@ func TransformTaxiRideshares() ([]TaxiRideshares, error) {
 	*/
 	fmt.Println("Extracting data from the taxi and rideshare endpoints")
 
-	taxiData, err := ExtractTaxis()
+	taxiData, err := ExtractTaxis(db)
 	if err != nil {
 		return nil, err
 	}
 
-	rideshareData, err := ExtractRideshares()
+	rideshareData, err := ExtractRideshares(db)
 	if err != nil {
 		return nil, err
 	}
@@ -192,15 +229,16 @@ func TransformTaxiRideshares() ([]TaxiRideshares, error) {
 	return merged, nil
 }
 
-func LoadTaxiRideshares(db *gorm.DB) {
+func LoadTaxiRideshares(db *gorm.DB) error {
 
-	data, err := TransformTaxiRideshares()
+	data, err := TransformTaxiRideshares(db)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 	fmt.Println("Data transformed successfully")
 
 	pkg.LoadToPostgres(db, data)
 
 	fmt.Println("Data loaded successfully")
+	return err
 }

@@ -1,6 +1,9 @@
 package daily
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/ejones77/432_final_project/pkg"
 	"gorm.io/gorm"
 )
@@ -31,7 +34,7 @@ type BuildingPermits struct {
 	Longitude            pkg.Float64String `json:"longitude" db:"longitude"`
 }
 
-func ExtractBuildingPermits() ([]BuildingPermits, error) {
+func ExtractBuildingPermits(db *gorm.DB) ([]BuildingPermits, error) {
 
 	columns := []string{
 		"id",
@@ -60,11 +63,25 @@ func ExtractBuildingPermits() ([]BuildingPermits, error) {
 	}
 
 	var results []BuildingPermits
+
+	// Check if the table exists
+	var startDate, endDate string
+	if pkg.IsEmpty(db, "building_permits") {
+		// Calculate start and end dates based on max date
+		var maxDate time.Time
+		db.Table("building_permits").Select("max(application_start_date)").Scan(&maxDate)
+		startDate = maxDate.Format("2006-01-02")
+		endDate = maxDate.AddDate(0, 0, 1).Format("2006-01-02")
+	} else {
+		// Use this first month as a sample
+		startDate = "2020-04-01"
+		endDate = "2020-05-01"
+	}
+
 	err := pkg.ConcurrentQuerySample("ydr8-5enu",
 		"application_start_date",
 		columns,
-		`application_start_date >= '2020-04-01' 
-		AND application_start_date < '2020-05-01'`,
+		fmt.Sprintf(`application_start_date >= '%s' AND application_start_date < '%s'`, startDate, endDate),
 		4,
 		2000,
 		&results)
@@ -76,11 +93,21 @@ func ExtractBuildingPermits() ([]BuildingPermits, error) {
 }
 
 func LoadBuildingPermits(db *gorm.DB) error {
-	data, err := ExtractBuildingPermits()
+	data, err := ExtractBuildingPermits(db)
 	if err != nil {
 		return err
 	}
 
 	pkg.LoadToPostgres(db, data)
+	return nil
+}
+
+func UpdateBuildingPermits(db *gorm.DB, permits []BuildingPermits) error {
+	for _, permit := range permits {
+		result := db.Model(&BuildingPermits{}).Where("id = ?", permit.ID).Updates(permit)
+		if result.Error != nil {
+			return result.Error
+		}
+	}
 	return nil
 }

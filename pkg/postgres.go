@@ -5,26 +5,19 @@ package pkg
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-func ConnectToPostgres() *gorm.DB {
+func ConnectToPostgres(dsn string) *gorm.DB {
 	err := godotenv.Load(".env")
 	if err != nil {
 		panic("Error loading .env file")
 	}
-
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("POSTGRES_HOST"),
-		os.Getenv("POSTGRES_PORT"),
-		os.Getenv("POSTGRES_USER"),
-		os.Getenv("POSTGRES_PASSWORD"),
-		os.Getenv("POSTGRES_DB"))
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -35,24 +28,22 @@ func ConnectToPostgres() *gorm.DB {
 	return db
 }
 
-func GeneratePlaceholders(numFields int) string {
-	/*
-		Helps format the query string to not have to write $1, $2, $3, etc.
-	*/
-	placeholders := ""
-	for i := 1; i <= numFields; i++ {
-		placeholders += fmt.Sprintf("$%d", i)
-		if i != numFields {
-			placeholders += ", "
-		}
-	}
-	return placeholders
+func IsEmpty(db *gorm.DB, tableName string) bool {
+	var count int64
+	db.Table(tableName).Count(&count)
+	return count == 0
+}
+
+func IsDupe(db *gorm.DB, tableName string, idField string, idValue interface{}) bool {
+	var count int64
+	db.Table(tableName).Where(idField+" = ?", idValue).Count(&count)
+	return count > 0
 }
 
 func LoadToPostgres(db *gorm.DB, data interface{}) {
 	batchSize := 500
 
-	err := db.CreateInBatches(data, batchSize).Error
+	err := db.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(data, batchSize).Error
 	if err != nil {
 		fmt.Println(err)
 	}

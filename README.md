@@ -11,7 +11,8 @@
 - Transformations shape the raw data into the format needed for the postgres tables
     - Making sense of the types from JSON and the types we need to combine things for postgres is handled through custom types
 - Loading enforces type constraints & delivers records to postgres
-- Geocoding is done through postGIS and queries after loading raw data in. 
+- Geocoding is done through postGIS and queries after loading raw data in, matching on JOINS with geoJSON polygons for ZIP code and Community Area
+-
 
 ## Set up -- postgres
 
@@ -63,6 +64,7 @@ psql -U postgres
 then in psql:
 ```
 CREATE DATABASE <db_name>;
+CREATE DATABASE test_db;
 \c <db_name>
 
 CREATE EXTENSION postgis;
@@ -82,21 +84,24 @@ I tried to find a way to just run init.sql but got stumped.
 But you'll end up with the following
 
 ```
-               List of relations
- Schema |       Name        | Type  |  Owner
---------+-------------------+-------+----------
- public | building_permits  | table | postgres
- public | covid             | table | postgres
- public | geographies       | table | postgres
- public | taxi_rideshares   | table | postgres
- public | traffic_estimates | table | postgres
+                   List of relations
+ Schema |            Name            | Type  |  Owner
+--------+----------------------------+-------+----------
+ public | boundaries_community_areas | table | postgres
+ public | boundaries_zip_codes       | table | postgres
+ public | building_permits           | table | postgres
+ public | covid_cases                | table | postgres
+ public | geographies                | table | postgres
+ public | spatial_ref_sys            | table | postgres
+ public | taxi_rideshares            | table | postgres
+ public | traffic_estimates          | table | postgres
 
 ```
 
 - Copy geojson files into the container
 `docker exec -it <container_id> bash`
 
-- Running `taxi_rideshares.go` and `geographies.go` will populate the database
+- Running `app.go` will populate the database 
 - then a query like this can obtain the zip codes and community areas through PostGIS
 
 ```
@@ -110,10 +115,48 @@ ON ST_Contains(
 ```
 And with that, the data should be ready for analysis on the front end!
 
+## Setup -- go code locally
+```
+docker build -t 432-final . && docker run --env-file .env 432-final
+```
+
+## Setup -- containerized deployment
+- this assumes a private github repo is set up for the project
+
+- creating a new VM instance (also e2 micro)
+- setting up docker 
+
+```
+sudo apt-get update &&
+sudo apt-get install -y docker.io
+```
+
+- providing a connection to github
+
+```
+ssh-keygen -t ed25519 -C "your_email"
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+cat ~/.ssh/id_ed25519.pub
+```
+
+Copy the output of the last command and add it to GitHub account
+
+Then you should be able to clone
+and then add your .env file to the repo
+and be able to build with the same steps
+
+```
+docker build -t 432-final . && docker run --env-file .env 432-final
+```
+
+Assumes my private repository, but changing this to your solo reference should work too.
+
 ## Dependencies (handled by Go):
 - [go-soda](https://pkg.go.dev/github.com/SebastiaanKlippert/go-soda@v1.0.1)
 - [gorm](https://gorm.io/index.html)
 - [godotenv](https://pkg.go.dev/github.com/joho/Godotenv)
+- [cron](https://github.com/robfig/cron)
 
 ## Dependencies (necessary for developing locally):
 - Google cloud console
@@ -121,7 +164,6 @@ And with that, the data should be ready for analysis on the front end!
 - Go version 1.22.0
 - ogr2ogr (installing GDAL)
 - a `.env` file with the following parameters
-
 
 ```
 POSTGRES_DB=YourDBName
@@ -134,5 +176,4 @@ POSTGRES_PORT=5432
 
 
 ## Still to do:
-- Dockerize & Deploy
 - Frontend deployment

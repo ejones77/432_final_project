@@ -2,6 +2,7 @@ package weekly
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/ejones77/432_final_project/pkg"
 	"gorm.io/gorm"
@@ -20,7 +21,7 @@ type CovidCases struct {
 	Population                  pkg.Float64String `json:"population" db:"population"`
 }
 
-func ExtractCovid() ([]CovidCases, error) {
+func ExtractCovid(db *gorm.DB) ([]CovidCases, error) {
 
 	columns := []string{
 		"zip_code",
@@ -36,12 +37,33 @@ func ExtractCovid() ([]CovidCases, error) {
 	}
 
 	var results []CovidCases
+	// Check if the table exists
+	var count int64
+	db.Table("covid_cases").Count(&count)
+
+	var startDate, endDate string
+
+	if count > 0 {
+		// Fetch the maximum date from the database
+		var maxDate time.Time
+		db.Table("covid_cases").Select("max(week_start)").Scan(&maxDate)
+
+		// Calculate start and end dates based on max date
+		startDate = maxDate.Format("2006-01-02")
+		endDate = maxDate.AddDate(0, 0, 7).Format("2006-01-02")
+	} else {
+		// Use a static sample
+		startDate = "2020-04-01"
+		endDate = "2020-10-18"
+	}
+
 	err := pkg.QuerySample("yhhz-zm2v",
 		"week_start",
 		columns,
-		"",
+		fmt.Sprintf(`week_start >= '%s' AND week_start < '%s'`, startDate, endDate),
 		2000,
 		&results)
+
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -50,7 +72,7 @@ func ExtractCovid() ([]CovidCases, error) {
 }
 
 func LoadCovid(db *gorm.DB) error {
-	data, err := ExtractCovid()
+	data, err := ExtractCovid(db)
 	if err != nil {
 		return err
 	}
