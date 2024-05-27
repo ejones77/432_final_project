@@ -11,7 +11,10 @@
 - Transformations shape the raw data into the format needed for the postgres tables
     - Making sense of the types from JSON and the types we need to combine things for postgres is handled through custom types
 - Loading enforces type constraints & delivers records to postgres
-- Geocoding is done through postGIS and queries after loading raw data in, matching on JOINS with geoJSON polygons for ZIP code and Community Area
+- Geocoding is done through postGIS and queries after loading raw data in, matching on JOINS with geoJSON polygons for ZIP code and Community Area.
+    - There is a bit of setup here but it only needs to happen once and it's very cost effective.
+- The deployment uses GCP secrets management in one VM (or locally) to connect to the postgres database and continuously extract data on a batch schedule.
+- The cron execution all happens in `app.go` and the program runs and sleeps continuously.
 
 
 ## Dependencies (necessary for developing locally):
@@ -41,13 +44,16 @@ then added the json equivalent in GCP
 }
 ```
 
-gcp needs a service account with access to secrets management for this to work.
+the .env file helps with tests locally.
+The GCP secret ensures that the program can actually run on the production db
+
+GCP needs a service account with access to secrets management for this to work.
 
 ## Set up -- postgres
 
 - In a GCP project, create a VM instance under the Compute Engine
-- Start the machine with a container using the image `marketplace.gcr.io/google/postgresql15:latest`
-- This [tutorial](https://joncloudgeek.com/blog/deploy-postgres-container-to-compute-engine/) helped set up the necessary configurations for the VM (up to the point where they talk about db migrations)
+- Start the machine without a container.
+- This [tutorial](https://joncloudgeek.com/blog/deploy-postgres-container-to-compute-engine/) helped set up the necessary configurations for the VM (up to the point where they talk about db migrations) -- the firewall rules are key here.
 - Instead of using the pre-built Google container, we are submitting a custom container with PostGIS enabled. 
     - this is to allow for geocoding in the database when executing queries.
 
@@ -141,8 +147,9 @@ ON ST_Contains(
     boundaries_zip_codes.wkb_geometry, 
     ST_SetSRID(ST_Point(taxi_rideshares.pickup_centroid_longitude, taxi_rideshares.pickup_centroid_latitude), 4326)
 );
+LIMIT 10
 ```
-And with that, the data should be ready for analysis on the front end!
+And with that, the geospatial data should be ready for analysis on the front end!
 
 ## Setup -- go code locally
 
@@ -188,7 +195,7 @@ and be able to build with the same steps
 sudo docker build -t 432-final . && sudo docker run 432-final
 ```
 
-Assumes my private repository, but changing this to your solo reference should work too.
+Assumes my private repository, but changing the go code to your solo reference should work too.
 
 ## Dependencies (handled by Go):
 - [go-soda](https://pkg.go.dev/github.com/SebastiaanKlippert/go-soda@v1.0.1)
