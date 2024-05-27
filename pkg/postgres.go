@@ -34,12 +34,6 @@ func IsEmpty(db *gorm.DB, tableName string) bool {
 	return count == 0
 }
 
-func IsDupe(db *gorm.DB, tableName string, idField string, idValue interface{}) bool {
-	var count int64
-	db.Table(tableName).Where(idField+" = ?", idValue).Count(&count)
-	return count > 0
-}
-
 func LoadToPostgres(db *gorm.DB, data interface{}) {
 	batchSize := 500
 
