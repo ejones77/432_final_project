@@ -83,8 +83,6 @@ then you should be able to upload the geojson files to the VM & copy them to the
 
 ```
 sudo docker cp "Boundaries - Community Areas (current).geojson" <container_id_or_name>:/"Boundaries - Community Areas (current).geojson"
-sudo docker exec -it <container_id_or_name> bash
-ogr2ogr -f "PostgreSQL" PG:"dbname=<your_db> user=<your_username> password=<your_password>" /file.geojson
 ```
 
 easiest to have the files represent what you want the table name to be -- i.e. boundaries_community_areas
@@ -105,8 +103,12 @@ CREATE DATABASE test_db;
 CREATE EXTENSION postgis;
 ```
 
-- confirm the database is set up 
-- This process lets you define a db_name and password, the default user is postgres
+then you can load it into postgis while in the container. 
+```
+sudo docker exec -it <container_id_or_name> bash
+ogr2ogr -f "PostgreSQL" PG:"dbname=<your_db> user=<your_username> password=<your_password>" /file.geojson
+```
+
 - Confirm the connection outside the VM on your local machine with
 
 ```
@@ -132,9 +134,6 @@ But you'll end up with the following
  public | traffic_estimates          | table | postgres
 
 ```
-
-- Copy geojson files into the container
-`docker exec -it <container_id> bash`
 
 - Running `app.go` will populate the database 
 - then a query like this can obtain the zip codes and community areas through PostGIS
