@@ -128,12 +128,8 @@ func ExtractRideshares(db *gorm.DB) ([]Rideshares, error) {
 	}
 
 	var results []Rideshares
-	var count int64
-	db.Table("rideshares").Count(&count)
-
 	var startDate, endDate string
-
-	if count > 0 {
+	if !pkg.IsEmpty(db, "rideshares") {
 		// Fetch the maximum date from the database
 		var maxDate time.Time
 		db.Table("rideshares").Select("max(trip_start_timestamp)").Scan(&maxDate)

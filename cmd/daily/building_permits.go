@@ -66,7 +66,7 @@ func ExtractBuildingPermits(db *gorm.DB) ([]BuildingPermits, error) {
 
 	// Check if the table exists
 	var startDate, endDate string
-	if pkg.IsEmpty(db, "building_permits") {
+	if !pkg.IsEmpty(db, "building_permits") {
 		// Calculate start and end dates based on max date
 		var maxDate time.Time
 		db.Table("building_permits").Select("max(application_start_date)").Scan(&maxDate)

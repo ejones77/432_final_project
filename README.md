@@ -147,7 +147,7 @@ and then add your .env file to the repo
 and be able to build with the same steps
 
 ```
-docker build -t 432-final . && docker run --env-file .env 432-final
+sudo docker build -t 432-final . && sudo docker run --env-file .env 432-final
 ```
 
 Assumes my private repository, but changing this to your solo reference should work too.

@@ -38,12 +38,9 @@ func ExtractCovid(db *gorm.DB) ([]CovidCases, error) {
 
 	var results []CovidCases
 	// Check if the table exists
-	var count int64
-	db.Table("covid_cases").Count(&count)
 
 	var startDate, endDate string
-
-	if count > 0 {
+	if !pkg.IsEmpty(db, "covid_cases") {
 		// Fetch the maximum date from the database
 		var maxDate time.Time
 		db.Table("covid_cases").Select("max(week_start)").Scan(&maxDate)
