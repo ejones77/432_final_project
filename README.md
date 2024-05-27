@@ -146,8 +146,8 @@ JOIN boundaries_zip_codes
 ON ST_Contains(
     boundaries_zip_codes.wkb_geometry, 
     ST_SetSRID(ST_Point(taxi_rideshares.pickup_centroid_longitude, taxi_rideshares.pickup_centroid_latitude), 4326)
-);
-LIMIT 10
+)
+LIMIT 10;
 ```
 And with that, the geospatial data should be ready for analysis on the front end!
 
