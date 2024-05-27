@@ -68,35 +68,3 @@ func (ct *CustomTime) UnmarshalJSON(b []byte) (err error) {
 func (ct CustomTime) Value() (driver.Value, error) {
 	return ct.Time, nil
 }
-
-// Handling Ints
-
-type IntString struct {
-	int
-}
-
-func (i *IntString) UnmarshalJSON(b []byte) error {
-	str := string(b)
-	str = strings.Trim(str, "\"") // Remove quotation marks
-
-	if str == "" || str == "null" {
-		i.int = 0
-		return nil
-	}
-
-	val, err := strconv.Atoi(str)
-	if err != nil {
-		return err
-	}
-
-	i.int = val
-	return nil
-}
-
-func (i IntString) String() string {
-	return strconv.Itoa(i.int)
-}
-
-func (i IntString) Value() (driver.Value, error) {
-	return i.int, nil
-}
