@@ -12,6 +12,7 @@ import (
 
 	"github.com/ejones77/432_final_project/cmd/daily"
 	"github.com/ejones77/432_final_project/cmd/monthly"
+	"github.com/ejones77/432_final_project/cmd/once"
 	"github.com/ejones77/432_final_project/cmd/weekly"
 	"github.com/ejones77/432_final_project/pkg"
 	"github.com/robfig/cron/v3"
@@ -93,6 +94,14 @@ func main() {
 	)
 	db := pkg.ConnectToPostgres(dsn)
 	c := cron.New()
+
+	// rune the once job if the table is empty
+	if pkg.IsEmpty(db, "geographies") {
+		err = once.LoadGeographies(db)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	// Run the daily job immediately on startup
 	err = daily.LoadBuildingPermits(db)

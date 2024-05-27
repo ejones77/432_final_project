@@ -156,12 +156,15 @@ func TransformGeographies() ([]Geographies, error) {
 	return geographies, nil
 }
 
-func LoadGeographies(db *gorm.DB) {
+func LoadGeographies(db *gorm.DB) error {
 	geographies, err := TransformGeographies()
 	if err != nil {
 		fmt.Println(err)
+		return err
 	}
 	fmt.Printf("Data transformed successfully")
 	pkg.LoadToPostgres(db, geographies)
 	fmt.Printf("Data loaded successfully")
+
+	return nil
 }
